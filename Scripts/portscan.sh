@@ -11,7 +11,7 @@ if command -v ss > /dev/null 2>&1; then
     ss -tlne | grep LISTEN | while read line; do
         port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
         address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-        echo "  Port: $port (Address: $address) Process Info: $(echo "$line" | awk '{print $6, $7, $8}')"
+        echo "  Port: $port (Address: $address) Process Info: $(echo "$line" | awk '{print $8}')"
     done
     echo
     
@@ -21,7 +21,7 @@ if command -v ss > /dev/null 2>&1; then
         if [[ "$line" == *":"* ]] && [[ "$line" != "Local Address:Port"* ]]; then
             port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
             address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-            echo "  Port: $port (Address: $address) Process Info: $(echo "$line" | awk '{print $6, $7, $8}')"
+            echo "  Port: $port (Address: $address) Process Info: $(echo "$line" | awk '{print $8}')"
         fi
     done
     echo
