@@ -11,7 +11,10 @@ if command -v ss > /dev/null 2>&1; then
     ss -tlne | grep LISTEN | while read line; do
         port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
         address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-        echo "  Port: $port (Address: $address) Process Info: $(echo "$line" | awk '{print $8}')"
+        process=$(echo "$line" | awk '{print $8}')
+        procName=$(echo "$process" | sed 's|.*/||')
+        echo "Port: $port (Address: $address) | Process Info: $process  |  SystemCtl Proc ID: $(systemctl show $procName | egrep "PID"  | egrep -Ev 'Control|Exec|Guess')"
+        echo "LSOF Info: $(lsof -i :$port)"
     done
     echo
     
@@ -21,7 +24,10 @@ if command -v ss > /dev/null 2>&1; then
         if [[ "$line" == *":"* ]] && [[ "$line" != "Local Address:Port"* ]]; then
             port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
             address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-            echo "  Port: $port (Address: $address) Process Info: $(echo "$line" | awk '{print $8}')"
+            process=$(echo "$line" | awk '{print $8}')
+            procName=$(echo "$process" | sed 's|.*/||')
+        echo "Port: $port (Address: $address) | Process Info: $process  |  SystemCtl Proc ID: $(systemctl show $procName | egrep "PID"  | egrep -Ev 'Control|Exec|Guess')"
+        echo "LSOF Info: $(lsof -i :$port)"
         fi
     done
     echo
@@ -37,7 +43,10 @@ if command -v netstat > /dev/null 2>&1; then
     netstat -tln | grep LISTEN | while read line; do
         port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
         address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-        echo "  Port: $port (Address: $address)"
+        process=$(echo "$line" | awk '{print $6}')
+        procName=$(echo "$process" | sed 's|.*/||')
+        echo "Port: $port (Address: $address) | Process Info: $process  |  SystemCtl Proc ID: $(systemctl show $procName | egrep "PID"  | egrep -Ev 'Control|Exec|Guess')"
+        echo "LSOF Info: $(lsof -i :$port)"
     done
     echo
     
@@ -47,34 +56,15 @@ if command -v netstat > /dev/null 2>&1; then
         if [[ "$line" == *":"* ]] && [[ "$line" != "Proto"* ]] && [[ "$line" != "Active"* ]]; then
             port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
             address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-            echo "  Port: $port (Address: $address)"
+            process=$(echo "$line" | awk '{print $6}')
+            procName=$(echo "$process" | sed 's|.*/||')
+            echo "Port: $port (Address: $address) | Process Info: $process  |  SystemCtl Proc ID: $(systemctl show $procName | egrep "PID"  | egrep -Ev 'Control|Exec|Guess')"
+            echo "LSOF Info: $(lsof -i :$port)"
         fi
     done
     echo
 else
     echo "netstat command not available"
-fi
-
-# Method 3: Alternative approach using /proc/net (Linux only)
-echo "--- Using /proc/net files (Linux only) ---"
-if [ -f "/proc/net/tcp" ]; then
-    echo "TCP Listening Ports from /proc/net/tcp:"
-    awk '$4=="0A" {print $2}' /proc/net/tcp | while read addr_port; do
-        port_hex=$(echo "$addr_port" | cut -d':' -f2)
-        port_dec=$((0x$port_hex))
-        echo "  Port: $port_dec"
-    done
-    echo
-fi
-
-if [ -f "/proc/net/udp" ]; then
-    echo "UDP Listening Ports from /proc/net/udp:"
-    awk '$4=="07" {print $2}' /proc/net/udp | while read addr_port; do
-        port_hex=$(echo "$addr_port" | cut -d':' -f2)
-        port_dec=$((0x$port_hex))
-        echo "  Port: $port_dec"
-    done
-    echo
 fi
 
 echo "=== Port scan complete ==="
