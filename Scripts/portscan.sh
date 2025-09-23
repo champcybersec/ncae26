@@ -1,0 +1,2 @@
+ss –plunte
+netstat -tuln
