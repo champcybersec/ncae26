@@ -1,7 +1,5 @@
 #!/bin/bash
 
-dos2unix $0
-
 echo "=== Scanning for open and listening ports ==="
 echo
 
@@ -10,20 +8,20 @@ echo "--- Using ss command ---"
 if command -v ss > /dev/null 2>&1; then
     # Get listening TCP ports
     echo "TCP Listening Ports:"
-    ss -tln | grep LISTEN | while read line; do
+    ss -tlne | grep LISTEN | while read line; do
         port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
         address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-        echo "  Port: $port (Address: $address)"
+        echo "  Port: $port (Address: $address) Process Info: $(echo "$line" | awk '{print $6, $7, $8}')"
     done
     echo
     
     # Get listening UDP ports
     echo "UDP Listening Ports:"
-    ss -uln | while read line; do
+    ss -ulne | while read line; do
         if [[ "$line" == *":"* ]] && [[ "$line" != "Local Address:Port"* ]]; then
             port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
             address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-            echo "  Port: $port (Address: $address)"
+            echo "  Port: $port (Address: $address) Process Info: $(echo "$line" | awk '{print $6, $7, $8}')"
         fi
     done
     echo
