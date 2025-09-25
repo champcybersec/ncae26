@@ -1,70 +1,46 @@
 #!/bin/bash
 
-echo "=== Scanning for open and listening ports ==="
+echo -e "${BLUE}=== Scanning for open and listening ports ===${NC}"
 echo
 
+RED='\033[0;31m'
+BLUE='\033[0;34m'
+NC='\033[0m' # No Color
+
 # Method 1: Using ss command (more modern)
-echo "--- Using ss command ---"
 if command -v ss > /dev/null 2>&1; then
     # Get listening TCP ports
-    echo "TCP Listening Ports:"
+    echo -e "${BLUE}Basic Results${NC}"
+    ss -tulnpe
+
+    echo
+
+    echo -e "${BLUE}--- Detailed Results with LSOF ---${NC}"
+    if ! command -v lsof > /dev/null 2>&1; then
+        echo -e "${RED}LSOF command not found. Please install lsof for detailed results.${NC}"
+        exit 1
+    fi
+
+    echo -e "${BLUE}TCP Listening Ports:${NC}"
     ss -tlne | grep LISTEN | while read line; do
         port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
-        address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-        process=$(echo "$line" | awk '{print $8}')
-        procName=$(echo "$process" | sed 's|.*/||')
-        echo "Port: $port (Address: $address) | Process Info: $process  |  SystemCtl Proc ID: $(systemctl show $procName | egrep "PID"  | egrep -Ev 'Control|Exec|Guess')"
-        echo "LSOF Info: $(lsof -i :$port)"
+        echo "Port: $port"
+        echo "LSOF PID: $(lsof -ti :$port)"
+        echo
     done
     echo
-    
-    # Get listening UDP ports
-    echo "UDP Listening Ports:"
-    ss -ulne | while read line; do
-        if [[ "$line" == *":"* ]] && [[ "$line" != "Local Address:Port"* ]]; then
-            port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
-            address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-            process=$(echo "$line" | awk '{print $8}')
-            procName=$(echo "$process" | sed 's|.*/||')
-        echo "Port: $port (Address: $address) | Process Info: $process  |  SystemCtl Proc ID: $(systemctl show $procName | egrep "PID"  | egrep -Ev 'Control|Exec|Guess')"
-        echo "LSOF Info: $(lsof -i :$port)"
-        fi
-    done
-    echo
-else
-    echo "ss command not available"
-fi
 
-echo "--- Using netstat command ---"
-# Method 2: Using netstat command (fallback)
-if command -v netstat > /dev/null 2>&1; then
-    # Get listening TCP ports
-    echo "TCP Listening Ports:"
-    netstat -tln | grep LISTEN | while read line; do
+   echo -e "${BLUE}UDP Listening Ports:${NC}"
+   ss -ulne | while read line; do
         port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
-        address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-        process=$(echo "$line" | awk '{print $6}')
-        procName=$(echo "$process" | sed 's|.*/||')
-        echo "Port: $port (Address: $address) | Process Info: $process  |  SystemCtl Proc ID: $(systemctl show $procName | egrep "PID"  | egrep -Ev 'Control|Exec|Guess')"
-        echo "LSOF Info: $(lsof -i :$port)"
-    done
-    echo
-    
-    # Get listening UDP ports  
-    echo "UDP Listening Ports:"
-    netstat -uln | while read line; do
-        if [[ "$line" == *":"* ]] && [[ "$line" != "Proto"* ]] && [[ "$line" != "Active"* ]]; then
-            port=$(echo "$line" | awk '{print $4}' | sed 's/.*://')
-            address=$(echo "$line" | awk '{print $4}' | sed 's/:[^:]*$//')
-            process=$(echo "$line" | awk '{print $6}')
-            procName=$(echo "$process" | sed 's|.*/||')
-            echo "Port: $port (Address: $address) | Process Info: $process  |  SystemCtl Proc ID: $(systemctl show $procName | egrep "PID"  | egrep -Ev 'Control|Exec|Guess')"
-            echo "LSOF Info: $(lsof -i :$port)"
-        fi
-    done
-    echo
-else
-    echo "netstat command not available"
-fi
+        echo "Port: $port"
 
-echo "=== Port scan complete ==="
+           if ! lsof -ti :"$port" > /dev/null 2>&1; then
+               echo -e "${RED}No process found using port $port${NC}"
+           else
+               echo "LSOF PID: $(lsof -ti :$port)"
+           fi           
+           echo   
+   done
+    echo
+fi
